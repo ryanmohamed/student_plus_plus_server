@@ -30,6 +30,9 @@ module.exports = (sequelize, DataTypes) => {
         Users.hasMany(models.Courses, {
             onDelete: "cascade" //on a user delete, all assignments will also be deleted
         });
+        Users.hasOne(models.Tokens, {
+            onDelete: "cascade" //on a user delete, all assignments will also be deleted
+        });
     };
 
     return Users;

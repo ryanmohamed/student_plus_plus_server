@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Users } = require('../models');
+const { Users, Tokens } = require('../models');
 
 //bcrypt for hashing the users password before it goes into database
 const bcrypt = require('bcrypt');
@@ -61,9 +61,55 @@ router.post('/login', async (req, res) => {
 
     //jwt authentication, create an access token for the user
     const plainUser = { username: user.username }; //serialized payload must be plain object 
-    const accessToken = jwt.sign(plainUser, process.env.ACCESS_TOKEN_SECRET); //we want to serialize the user obj we found based on our secret key
-    res.json({accessToken: accessToken}); //user information stored here
+    
+    //this alone, gives the user infinite access, we want to mend this with a refresh token
+    const accessToken = generateAccessToken(plainUser); //we want to serialize the user obj we found based on our secret key
+    const refreshToken = generateRefreshToken(plainUser);
 
+    //add a refresh token (used to persist user access to expiring access tokens)
+    await Tokens.create({ refreshToken: refreshToken, UserUsername: plainUser.username });
+    
+    res.cookie('refreshToken', refreshToken, {
+        httpOnly: true //for security, can't access via browser js
+    });
+
+    
+    res.json({ accessToken: accessToken});
+    
 });
+
+//for creating a new access token
+router.post('/token', (req, res) => {
+    const refreshToken = req.body.token;
+    if(!refreshToken) return res.sendStatus(401);
+    const temp = Tokens.findOne({where: {refreshToken: refreshToken}});
+    if(!temp) return res.sendStatus(403);
+
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
+        if(err) return res.sendStatus(403);
+        const accessToken = generateAccessToken({ username: user.username });
+        res.json({accessToken: accessToken});
+    });
+});
+
+//to remove these refresh tokens
+router.delete('/logout', async (req, res) => {
+    const token = await Tokens.findOne({ where: {refreshToken: req.body.token} });
+    if(!token) return res.json({ error: "refresh token doesn't exist"});
+    await token.destroy();
+    return res.json({ message: "succesfully logged out"});
+});
+
+function generateAccessToken(user){
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '10m'
+    });
+}
+
+function generateRefreshToken(user){
+    return jwt.sign(user, process.env.REFRESH_TOKEN_SECRET, {
+        expiresIn: '7d'
+    });
+}
 
 module.exports = router;

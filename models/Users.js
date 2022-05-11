@@ -4,7 +4,7 @@ module.exports = (sequelize, DataTypes) => {
 
     const Users = sequelize.define("Users", {
         //define each field or column
-        username: {
+        email: {
             primaryKey: true,
             type: DataTypes.STRING,
             allowNull: false,

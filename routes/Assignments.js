@@ -14,7 +14,7 @@ router.get('/:courseName', authenticateToken, async (req, res) => {
     const course = await Courses.findOne({
         where: {
             name: req.params.courseName,
-            UserUsername: req.user.username //provided by middleware
+            UserEmail: req.user.email //provided by middleware
         }
     });
 
@@ -32,7 +32,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 
     /* after we've authenticated requesting client */
 
-    const username = req.user.username; //provided by middleware
+    const email = req.user.email; //provided by middleware
     const body = req.body; // { course, dueDate, weight, difficulty, priority }
 
     //find the course belonging to the user
@@ -40,7 +40,7 @@ router.post('/create', authenticateToken, async (req, res) => {
     { 
         where: { 
             name: body.course,
-            UserUsername: username
+            UserEmail: email
         } 
     });
 

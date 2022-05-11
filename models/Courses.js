@@ -9,6 +9,11 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false
         },
         gpa: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: 'NA'
+        },
+        grade: {
             type: DataTypes.INTEGER,
             allowNull: true,
             defaultValue: 0

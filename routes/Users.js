@@ -7,8 +7,8 @@ require('dotenv').config();
 
 router.get('/', authenticateToken, async (req, res) => {   
     //after requester has been authenticated
-    const user = await Users.findOne({ where: {username: req.user.username} }); //must wait before we execute
-    res.json({username: user.username}); //for now send a json with requested name, nothing else
+    const user = await Users.findOne({ where: {email: req.user.email} }); //must wait before we execute
+    res.json({email: user.email}); //for now send a json with requested name, nothing else
 });
 
 //middleware, "lock" between client accessing any route

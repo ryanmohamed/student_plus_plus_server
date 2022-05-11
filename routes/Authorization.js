@@ -12,18 +12,18 @@ require('dotenv').config();
 //inserting data into database
 router.post('/signup', async (req, res) => {
 
-    const { username, password } = req.body; //extract from json
+    const { email, password } = req.body; //extract from json
 
-    if(!username) return res.status(400).json({error: 'empty username'});
+    if(!email) return res.status(400).json({error: 'empty email'});
     if(!password) return res.status(400).json({error: 'empty password'});
     
-    const user = await Users.findOne({ where: {username: username} });
-    if(user) return res.json({error: 'username taken'});
+    const user = await Users.findOne({ where: {email: email} });
+    if(user) return res.json({error: 'email taken'});
 
     //hash the password 
     bcrypt.hash(password, 10).then( async (hash) => { //returns a promise so we catch the hash with a callback passed to 'then'
         const newUser = await Users.create({
-            username: username,
+            email: email,
             password: hash //generates uuid on it's own
         });
         res.json({ messgae: "succesfully signed up"});
@@ -34,9 +34,9 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
 
     //AUTHENTICATION
-    const { username, password } = req.body;
-    if(!username){
-        res.json({error: 'empty username'});
+    const { email, password } = req.body;
+    if(!email){
+        res.json({error: 'empty email'});
         return;
     }
     if(!password){
@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
     }
 
     //can insert into try block
-    const user = await Users.findOne({ where: {username: username} });
+    const user = await Users.findOne({ where: {email: email} });
     if(!user){
         res.json({error: 'user not found'});
         return;
@@ -60,14 +60,14 @@ router.post('/login', async (req, res) => {
     });
 
     //jwt authentication, create an access token for the user
-    const plainUser = { username: user.username }; //serialized payload must be plain object 
+    const plainUser = { email: user.email }; //serialized payload must be plain object 
     
     //this alone, gives the user infinite access, we want to mend this with a refresh token
     const accessToken = generateAccessToken(plainUser); //we want to serialize the user obj we found based on our secret key
     const refreshToken = generateRefreshToken(plainUser);
 
     //add a refresh token (used to persist user access to expiring access tokens)
-    await Tokens.create({ refreshToken: refreshToken, UserUsername: plainUser.username });
+    await Tokens.create({ refreshToken: refreshToken, UserEmail: plainUser.email });
     
     res.cookie('refreshToken', refreshToken, {
         httpOnly: true //for security, can't access via browser js
@@ -87,7 +87,7 @@ router.post('/token', (req, res) => {
 
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
         if(err) return res.sendStatus(403);
-        const accessToken = generateAccessToken({ username: user.username });
+        const accessToken = generateAccessToken({ username: user.email });
         res.json({accessToken: accessToken});
     });
 });

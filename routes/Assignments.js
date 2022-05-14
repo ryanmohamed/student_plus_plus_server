@@ -27,6 +27,44 @@ router.get('/:courseName', authenticateToken, async (req, res) => {
     res.json(assignments);
 });
 
+router.get('/', authenticateToken, async (req, res) => {
+
+    //get course
+    const courses = await Courses.findAll({
+        where: {
+            UserEmail: req.user.email //provided by middleware
+        }
+    });
+
+    //if course does not exist
+    if(!courses) return res.json({ error: "no courses exist"});
+
+    let temp = [];
+
+    let assignments = await Promise.all(courses.map(async (course) => {
+        return await getAssignments(course);
+    }));
+
+    const payload = assignments.filter(assignment => {
+        return assignment !== undefined;
+    });
+
+    return res.json(payload);
+});
+
+const getAssignments = async (course) => {
+    const assignments = await Assignments.findAll({
+        where: { CourseId: course.id},
+        raw: true
+    });
+
+    if(!assignments) return;
+
+    if(assignments.length > 0 && assignments != undefined) {
+        return assignments;
+    }
+}
+
 //createAssignment
 router.post('/create', authenticateToken, async (req, res) => {
 
@@ -49,20 +87,27 @@ router.post('/create', authenticateToken, async (req, res) => {
     const courseID = course.id;
 
     //check if the assignment already exists
-    const temp = await Assignments.findOne({ where: { CourseId: courseID }});
-    if(temp) return res.json({error: "assignment already exists"});
 
-    const assignment = {
-        dueDate: req.body.dueDate,
-        weight: req.body.weight,
-        difficulty: req.body.difficulty,
-        priority: req.body.priority,
-        CourseId: courseID //designates a specific user
-    };
+    //console.log(courseID, req.body.id);
 
-    //we need a form we can submit 
-    await Assignments.create(assignment);
-    res.json(assignment);
+    //ONLY ALLOWS ONE ASSIGNMENT PER CLASS, revise
+
+    await Assignments.findOrCreate({
+        where: {
+            id: req.body.id,
+            dueDate: req.body.dueDate,
+            weight: req.body.weight,
+            difficulty: req.body.difficulty,
+            CourseId: courseID //designates a specific user
+        }
+    }).then(([assignment, created]) => {
+        if(created) return res.json(assignment);
+        else return res.json({error: 'assignments already exists'});
+    });
+
+    //if(!created) return res.json({error: "assignment already exists"});
+    //if(!row) return res.json({error: "unable to create"});
+    
 });
 
 //middleware, "lock" between client accessing any route

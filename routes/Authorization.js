@@ -26,7 +26,7 @@ router.post('/signup', async (req, res) => {
             email: email,
             password: hash //generates uuid on it's own
         });
-        res.json({ messgae: "succesfully signed up"});
+        res.json({ message: "succesfully signed up"});
     });
 
 });
@@ -36,45 +36,43 @@ router.post('/login', async (req, res) => {
     //AUTHENTICATION
     const { email, password } = req.body;
     if(!email){
-        res.json({error: 'empty email'});
-        return;
+        return res.json({error: 'empty email'});
     }
     if(!password){
-        res.json({error: 'empty password'});
-        return;
+        return res.json({error: 'empty password'});
     }
 
     //can insert into try block
     const user = await Users.findOne({ where: {email: email} });
     if(!user){
-        res.json({error: 'user not found'});
-        return;
+        return res.json({error: 'user not found'});
     }
     //compare entered password with hashed password
     //returns a promise, we handle with then, by passing a callback that takes in a match (null or not null)
-    bcrypt.compare(password, user.password).then((match) => {
+    await bcrypt.compare(password, user.password).then( async (match) => {
         if(!match){
-            res.json({error: 'incorrect password'});
-            return;
+            console.log(match);
+            return res.json({error: 'incorrect password'});
+        }
+
+        else {
+
+            //jwt authentication, create an access token for the user
+            const plainUser = { email: user.email }; //serialized payload must be plain object 
+    
+            //this alone, gives the user infinite access, we want to mend this with a refresh token
+            const accessToken = generateAccessToken(plainUser); //we want to serialize the user obj we found based on our secret key
+            const refreshToken = generateRefreshToken(plainUser);
+
+            //add a refresh token (used to persist user access to expiring access tokens)
+            await Tokens.create({ refreshToken: refreshToken, UserEmail: user.email });
+    
+            return res.cookie('refreshToken', refreshToken).json({ accessToken: accessToken});
+
         }
     });
 
-    //jwt authentication, create an access token for the user
-    const plainUser = { email: user.email }; //serialized payload must be plain object 
     
-    //this alone, gives the user infinite access, we want to mend this with a refresh token
-    const accessToken = generateAccessToken(plainUser); //we want to serialize the user obj we found based on our secret key
-    const refreshToken = generateRefreshToken(plainUser);
-
-    //add a refresh token (used to persist user access to expiring access tokens)
-    await Tokens.create({ refreshToken: refreshToken, UserEmail: plainUser.email });
-    
-    res.cookie('refreshToken', refreshToken, {
-        httpOnly: true //for security, can't access via browser js
-    });
-
-    
-    res.json({ accessToken: accessToken});
     
 });
 
@@ -87,7 +85,7 @@ router.post('/token', (req, res) => {
 
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
         if(err) return res.sendStatus(403);
-        const accessToken = generateAccessToken({ username: user.email });
+        const accessToken = generateAccessToken({ email: user.email });
         res.json({accessToken: accessToken});
     });
 });

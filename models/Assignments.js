@@ -4,6 +4,11 @@ const { Deferrable } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
     //create table
     const Assignments = sequelize.define('Assignments', {
+        id: {
+            primaryKey: true,
+            type: DataTypes.STRING,
+            allowNull: false
+        },
         dueDate: {
             type: DataTypes.DATEONLY,
             allowNull: false
@@ -18,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         priority: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            allowNull: true
         },
         completion: {
             type: DataTypes.BOOLEAN,

@@ -5,13 +5,25 @@ const { Courses } = require('../models');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+//getCourseName()
+router.get('/:courseID', authenticateToken, async (req, res) => {
+    
+    /* after we've authenticated requesting client */
+    const courseID = req.params.courseID; //get username from middleware
+    const course = await Courses.findOne({ where: {id: courseID} }); //must wait before we execute
+    if(!course) return res.json({error: "course does not exist"});
+    return res.json({name: course.name});
+    
+});
+
 //getCourses
 router.get('/', authenticateToken, async (req, res) => {
     
     /* after we've authenticated requesting client */
     const email = req.user.email; //get username from middleware
     const courses = await Courses.findAll({ where: {UserEmail: email} }); //must wait before we execute
-    res.json(courses);
+    if(courses.length === 0) return res.json({error: "no courses exist"});
+    return res.json(courses);
     
 });
 

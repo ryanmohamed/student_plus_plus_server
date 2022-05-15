@@ -94,7 +94,7 @@ router.post('/create', authenticateToken, async (req, res) => {
 
     await Assignments.findOrCreate({
         where: {
-            id: req.body.id,
+            name: req.body.name,
             dueDate: req.body.dueDate,
             weight: req.body.weight,
             difficulty: req.body.difficulty,

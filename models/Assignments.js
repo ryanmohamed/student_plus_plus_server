@@ -4,8 +4,8 @@ const { Deferrable } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
     //create table
     const Assignments = sequelize.define('Assignments', {
-        id: {
-            primaryKey: true,
+        name: {
+            // primaryKey: true, CANT BE PK BC OTHER ASSIGNMENTS CANT HAVE THE SAME
             type: DataTypes.STRING,
             allowNull: false
         },

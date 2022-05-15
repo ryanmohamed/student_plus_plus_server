@@ -3,7 +3,6 @@ const { v4: uuidv4 } = require('uuid');
 module.exports = (sequelize, DataTypes) => {
     //create table
     const Courses = sequelize.define('Courses', {
-        
         name: {
             type: DataTypes.STRING,
             allowNull: false

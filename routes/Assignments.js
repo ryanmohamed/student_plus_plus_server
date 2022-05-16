@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Assignments, Courses } = require('../models');
+const { Assignments, Courses, Categories } = require('../models');
 
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
@@ -27,6 +27,7 @@ router.get('/:courseName', authenticateToken, async (req, res) => {
     res.json(assignments);
 });
 
+//getPriorityList
 router.get('/', authenticateToken, async (req, res) => {
 
     //get course
@@ -35,34 +36,39 @@ router.get('/', authenticateToken, async (req, res) => {
             UserEmail: req.user.email //provided by middleware
         }
     });
-
+ 
     //if course does not exist
     if(!courses) return res.json({ error: "no courses exist"});
 
     let temp = [];
 
     let assignments = await Promise.all(courses.map(async (course) => {
-        return await getAssignments(course);
+        const assignments = await Assignments.findAll({
+            where: { CourseId: course.id},
+            order : [
+                ['priority', 'DESC']
+            ],
+            raw: true
+        })
+        if(assignments.length === 0) return;
+        await assignments.map(assignment => {
+            temp.push(assignment);
+            return;
+        });
     }));
-
-    const payload = assignments.filter(assignment => {
-        return assignment !== undefined;
-    });
-
-    return res.json(payload);
+    return res.json(temp);
 });
 
-const getAssignments = async (course) => {
-    const assignments = await Assignments.findAll({
-        where: { CourseId: course.id},
-        raw: true
-    });
+function diff(dueDate){
+    let dueMM = parseInt(dueDate.substring(5, 7));
+    let dueDD = parseInt(dueDate.substring(8));
+    let todayMM = new Date().getMonth() + 1;
+    let days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let todayDD = new Date().getDate();
 
-    if(!assignments) return;
+    if(todayMM > dueMM) return null;
+    return ((dueMM - todayMM) * days[todayMM-1]) + (dueDD - todayDD);
 
-    if(assignments.length > 0 && assignments != undefined) {
-        return assignments;
-    }
 }
 
 //createAssignment
@@ -88,25 +94,75 @@ router.post('/create', authenticateToken, async (req, res) => {
 
     //check if the assignment already exists
 
-    //console.log(courseID, req.body.id);
+    const categoryName = (!req.body.courseCategory) ? null : req.body.courseCategory;
+    let priority = null;
 
-    //ONLY ALLOWS ONE ASSIGNMENT PER CLASS, revise
-
+    if(categoryName){
+        const category = await Categories.findOne({
+            where: {
+                name: req.body.courseCategory,
+                CourseId: courseID
+            }
+        });
+        if(!category) return res.json({error: "category doesn't exist in course"});
+    
+        const time = diff(req.body.dueDate);
+        const diffTimeRatio = req.body.difficulty / (time+1);
+        priority = diffTimeRatio * category.weight;
+    }
+    
     await Assignments.findOrCreate({
         where: {
+            courseName: body.course,
             name: req.body.name,
             dueDate: req.body.dueDate,
-            weight: req.body.weight,
+            perfectScore: req.body.perfectScore,
             difficulty: req.body.difficulty,
+            courseCategory: categoryName,
             CourseId: courseID //designates a specific user
         }
-    }).then(([assignment, created]) => {
-        if(created) return res.json(assignment);
+    }).then( async ([assignment, created]) => {
+        if(created) {
+            assignment.priority = priority;
+            await assignment.save();
+            return res.json(assignment);
+        }
         else return res.json({error: 'assignments already exists'});
     });
 
-    //if(!created) return res.json({error: "assignment already exists"});
-    //if(!row) return res.json({error: "unable to create"});
+});
+
+//updateAssignment(courseName, name)
+router.post('/:courseName/:name', authenticateToken, async (req, res) => {
+
+    //find the course belonging to the user
+    const course = await Courses.findOne(
+    { 
+        where: { 
+            name: req.params.courseName,
+            UserEmail: req.user.email
+        } 
+    });
+
+    //if course exists, get id
+    if(!course) return res.json({error: "course does not exist"});
+    const courseID = course.id;
+
+    const assignment = await Assignments.findOne({
+        where: {
+            name: req.params.name,
+            CourseId: courseID
+        }
+    });
+    if(!assignment) return res.json({error: "assignment does not exist"});
+    
+    assignment.completion = true;
+    assignment.scoreRecieved = req.body.scoreRecieved;
+    assignment.estimatedCompletionTime = req.body.estimatedCompletionTime;
+    assignment.priority = 0;
+    await assignment.save();
+
+    return res.json(assignment);
     
 });
 

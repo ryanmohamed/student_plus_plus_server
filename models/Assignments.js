@@ -4,6 +4,10 @@ const { Deferrable } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
     //create table
     const Assignments = sequelize.define('Assignments', {
+        courseName: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
         name: {
             // primaryKey: true, CANT BE PK BC OTHER ASSIGNMENTS CANT HAVE THE SAME
             type: DataTypes.STRING,
@@ -13,13 +17,17 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.DATEONLY,
             allowNull: false
         },
-        weight: {
+        perfectScore: {
             type: DataTypes.INTEGER,
             allowNull: false
         },
         difficulty: {
             type: DataTypes.INTEGER,
             allowNull: false
+        },
+        courseCategory: {
+            type: DataTypes.STRING,
+            allowNull: true
         },
         priority: {
             type: DataTypes.INTEGER,

@@ -7,15 +7,25 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: false
         },
+        runningTotal: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            defaultValue: 0.0
+        },
+        cummulativeTotal: {
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            defaultValue: 0.0
+        },
+        perfectTotal: { 
+            type: DataTypes.FLOAT,
+            allowNull: true,
+            defaultValue: 0.0
+        },
         gpa: {
             type: DataTypes.STRING,
             allowNull: true,
             defaultValue: 'NA'
-        },
-        grade: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            defaultValue: 0
         },
         id: { //each course must have a unique id bc multiple users may share the same course
             primaryKey: true,
@@ -29,6 +39,9 @@ module.exports = (sequelize, DataTypes) => {
 
     Courses.associate = (models) => {
         Courses.hasMany(models.Assignments, {
+            onDelete: 'cascade'
+        });
+        Courses.hasMany(models.Categories, {
             onDelete: 'cascade'
         });
     };
